@@ -5,8 +5,8 @@ I built a cloud-based pipeline that automatically cleans data files. Instead of 
 ### How it works
 * **S3 Bucket:** I created a bucket with two folders: `uploads/` and `processed/`.
 * **AWS Lambda:** I wrote a Python script using the Pandas library. I added a "Lambda Layer" so the function would have the tools it needs to handle data.
-* **The Trigger:** I connected the bucket to the Lambda function. Now, the second a file hits the `uploads` folder, the code wakes up and runs.
-* **The Agentic AI Layer:** Before saving, the system sends a sample of the data to **Amazon Bedrock**. I programmed an AI "Auditor" to review the first few rows and verify that the data is valid and hasn't been corrupted during processing.
+* **The Trigger:** I connected the bucket to the Lambda function. The second a file hits the `uploads` folder, the code  runs.
+* **The Agentic AI Layer:** Before saving, the system sends a sample of the data to **Amazon Bedrock**. I programmed an AI Auditor to review the first few rows and verify that the data is valid and hasn't been corrupted during processing.
 * **Cleaning & Verification:** The code removes empty rows (null values), confirms integrity via the AI agent, and saves a brand new "cleaned" version of the file into the `processed` folder.
 
 ### Tools I used
