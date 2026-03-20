@@ -1,27 +1,33 @@
 import json
 import boto3
 import urllib.parse
+import pandas as pd  
+import io
 
 s3 = boto3.client('s3')
 # Integrate Amazon Bedrock
-bedrock = boto3.client('bedrock-runtime', region_name='us-east-1')
+bedrock = boto3.client('bedrock-runtime', region_name='us-east-2')
 
 def lambda_handler(event, context):
     # Get bucket and file info
     bucket = event['Records'][0]['s3']['bucket']['name']
     key = urllib.parse.unquote_plus(event['Records'][0]['s3']['object']['key'])
     
-    # Get file from S3
+    # 1. Get file from S3
     response = s3.get_object(Bucket=bucket, Key=key)
-    content = response['Body'].read().decode('utf-8')
     
-    # Simple "cleaning": remove empty lines
-    lines = content.splitlines()
-    cleaned_lines = [line for line in lines if line.strip() != ""]
-    cleaned_content = "\n".join(cleaned_lines)
+    df = pd.read_csv(io.BytesIO(response['Body'].read()))
+    
+    # Cleaning the data
+    df.dropna(how='all', inplace=True)  # Remove empty rows
+    df.drop_duplicates(inplace=True)    # Remove duplicate rows
+    df.fillna("N/A", inplace=True)      # Fills blank cells with "N/A"
+    
+    # Convert cleaned table back to a text string
+    cleaned_content = df.to_csv(index=False)
 
-    # AI Agentic Layer to display first five lines
-    sample_text = "\n".join(cleaned_lines[:5])
+    # Grab the first 5 rows of the cleaned data for the AI to audit
+    sample_text = df.head(5).to_string() 
 
     # Prompt to review data sample
     prompt = f"System: You are a Data Auditor. Review this data sample and say 'VALID' or 'Corrupt':\n\n{sample_text}"
@@ -38,11 +44,11 @@ def lambda_handler(event, context):
     except Exception as e:
         print(f"AI Audit skipped: {e}")
     
-    # Save cleaned file back to S3
+    # 4. Save cleaned file back to S3
     output_key = f"processed/cleaned_{key}"
     s3.put_object(Bucket=bucket, Key=output_key, Body=cleaned_content)
     
     return {
         'statusCode': 200,
-        'body': json.dumps('Data cleaned and AI-Audited successfully!')
+        'body': json.dumps('Data cleaned with Pandas and AI-Audited successfully!')
     }
